@@ -1,0 +1,770 @@
+Financial Contributions to Presidential Campaigns in California by Miguel Angel Nieto
+========================================================
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, packages}
+# Load all of the packages that you end up using
+# in your analysis in this code chunk.
+
+# Notice that the parameter "echo" was set to FALSE for this code chunk.
+# This prevents the code from displaying in the knitted HTML output.
+# You should set echo=FALSE for all code chunks in your file.
+
+library(ggplot2)
+library(dplyr)
+library(gridExtra)
+library(scales)
+```
+# Opening the data set
+
+When I was trying to open the dataset with normal read.csv function I got the 
+following error:
+
+**Error in read.table(file = file, header = header, sep = sep, quote = quote,**
+**: duplicate 'row.names' are not allowed**
+  
+I opened the .csv with a normal text editor and counted the number of columns
+and values on each row. The number was correct in both cases, but there was
+something strange at the end of each row. They had a **comma sign**, so R was
+showing an error because there was no one-to-one relantionship.
+
+Using function parameters like **row.names=NULL** fixes the loading process,
+but it screws the relationshipt between each column and the corresponding data.
+So I finally decided to use normal UNIX tools to fix the data set.
+This is what the original data looks like:
+
+**C00575795,"P00003392","Clinton, Hillary Rodham","KLEEMAN, ANNETTE","SANTA MONICA","CA","904021336","N/A","RETIRED",100,04-MAY-16,"","X","* HILLARY VICTORY FUND","SA18","1079219","C5503390","P2016",***
+
+And this is what we need:
+
+**C00575795,"P00003392","Clinton, Hillary Rodham","KLEEMAN, ANNETTE","SANTA MONICA","CA","904021336","N/A","RETIRED",100,04-MAY-16,"","X","* HILLARY VICTORY FUND","SA18","1079219","C5503390","P2016"**
+
+To fix the dataset I did the following:
+
+```$ cat P00000001-CA.csv | sed 's/.$//' > P00000001-CA-fixed.csv```
+
+P00000001-CA-fixed.csv is the file that I am going to use.
+
+```{r echo=FALSE, Load_the_Data}
+# Load the Data
+ca <- read.csv("P00000001-CA-fixed.csv")
+
+# Leave only the Family Name of the candidate to make graphs easier to read
+ca$cand_nm <-(gsub(",.*$", "", ca$cand_nm))
+
+# Add a variable party that will specify to which party a particular
+# candidate belongs to.
+# First I create the variable just including the names we already have
+# (to just fill it)
+# and then we use a list to change the values depending on the value each
+# object has.
+
+ca$party <- factor(ca$cand_nm)
+
+levels(ca$party) <- list(
+    democrat = c("Clinton", "Sanders","O'Malley","Lessig","Webb"),
+    republican = c("Cruz", "Rubio", "Bush","Carson","Kasich","Fiorina",
+                    "Paul", "Trump","Walker","Christie","Graham",
+                    "Huckabee","Perry", "Santorum","Pataki","Jindal",
+                    "Gilmore"),
+    green = c("Stein"),
+    libertarian = c("Johnson")
+)
+```
+
+# Univariate Plots Section
+```{r echo=FALSE}
+
+ggplot(aes(x=cand_nm),data=ca)+
+  geom_bar() +
+  theme(axis.text.x=element_text(angle = -90, hjust = 0), plot.title = 
+          element_text(lineheight=.8, face="bold")) +
+  ggtitle("Count of contributions per candidate") +
+  ylab("Contributions") +
+  xlab("Candidates")
+
+ggplot(aes(x=party),data=ca)+
+  geom_bar() +
+  theme(axis.text.x=element_text(angle = -90, hjust = 0), plot.title = 
+          element_text(lineheight=.8, face="bold")) +
+  ggtitle("Count of contributions per party") +
+  ylab("Contributions") +
+  xlab("Parties")
+```
+
+These two graphs show the number of contributions received grouped by different
+factors. In first graph we can see that Clinton and Sanders are both the ones
+with the largest number of contributions received. Both are democrats, so the
+second graph doesn't really suprise us. Democrats are the ones that receive more
+contributions in California. Also, taking in account that they won the last two
+elections in that State, it shows that the party is really strong there.
+
+```{r echo=FALSE}
+# I create different datasets based on their occupation, grouping them in
+#retired, studends, not employed and all others
+
+retired <- ca %>%
+  filter(contbr_occupation =="RETIRED")
+
+students <- ca %>%
+  filter(contbr_occupation =="STUDENT")
+
+not_employed <- ca %>%
+  filter(contbr_occupation =="NOT EMPLOYED")
+
+other_people <- ca %>%
+  filter(contbr_occupation != "RETIRED" & contbr_occupation != "STUDENT" &
+           contbr_occupation != "NOT EMPLOYED")
+
+g_retired <- ggplot(aes(x=cand_nm),data=retired)+
+  geom_bar() +
+  theme(axis.text.x=element_text(angle = -90, hjust = 0),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        plot.title = element_text(lineheight=.8, face="bold")) +
+  ggtitle("Retired")
+
+g_students <- ggplot(aes(x=cand_nm),data=students)+
+  geom_bar() +
+  theme(axis.text.x=element_text(angle = -90, hjust = 0),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        plot.title = element_text(lineheight=.8, face="bold")) +
+  ggtitle("Students")
+
+g_not_employed <- ggplot(aes(x=cand_nm),data=not_employed)+
+  geom_bar() +
+  theme(axis.text.x=element_text(angle = -90, hjust = 0),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        plot.title = element_text(lineheight=.8, face="bold")) +
+  ggtitle("Not employed")
+
+g_other_people <- ggplot(aes(x=cand_nm),data=other_people)+
+  geom_bar() +
+  theme(axis.text.x=element_text(angle = -90, hjust = 0),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        plot.title = element_text(lineheight=.8, face="bold")) +
+  ggtitle("Others")
+
+grid.arrange(g_retired, g_students, g_not_employed, g_other_people)
+```
+
+Here I divided the people in different groups:
+
+- **Retired**
+- **Students**
+- **Not employed**
+- **Others**
+
+We see some trends. For example, seems that Clinton is the favourite of retired
+people. While in all other groups Sanders seems to be the winner in the number
+of contributions received. Clinton already said that she is against the idea
+of raising the retirement age, but I don't think that opinion affect retired
+people since it doesn't really affect them anymore. But it is still interesting
+to see that retired people are the ones that don't follow what seemst to be the
+trend of contributing more times to Sanders.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# List with the top 5 biggest cities in California
+biggest_five = c("LOS ANGELES", "SAN DIEGO", "SAN JOSE", "SAN FRANCISCO",
+                 "FRESNO")
+
+# Extract the data only from those top 5 biggest cities and store them in a
+#new variable
+
+biggest_five_cities <- ca %>%
+  filter(contbr_city %in% biggest_five)
+
+ggplot(aes(x=cand_nm),data=biggest_five_cities)+
+  geom_bar() +
+  theme(axis.text.x=element_text(angle = -90, hjust = 0),plot.title = 
+          element_text(lineheight=.8, face="bold")) +
+  ggtitle("Number of contributions received per candidate
+          in the biggest cities") +
+  xlab("Candidates") +
+  ylab("Number of contributions")
+  
+ggplot(aes(x=party),data=biggest_five_cities)+
+  geom_bar() +
+  theme(plot.title = element_text(lineheight=.8, face="bold")) +
+  ggtitle("Number of contributions received per party
+          in each of 5 biggest cities") +
+  facet_wrap(~contbr_city, scales = "free") +
+  ylab("Number of contributions") +
+  xlab("Parties")
+
+ggplot(aes(x=cand_nm),data=biggest_five_cities)+
+  geom_bar() +
+  facet_wrap(~contbr_city, scales = "free") +
+  theme(axis.text.x=element_text(angle = -90, hjust = 0),
+        plot.title = element_text(lineheight=.8, face="bold")) +
+  ggtitle("Number of contributions received by each candidate
+          in the 5 biggest cities") +
+  xlab("Candidates") +
+  ylab("Number of contributions")
+
+ggplot(aes(x=party),data=biggest_five_cities)+
+  geom_bar() +
+  facet_wrap(~contbr_city, scales = "free") +
+  theme(axis.text.x=element_text(angle = -90, hjust = 0),
+        plot.title = element_text(lineheight=.8, face="bold")) +
+  ggtitle("Number of contributions received by each party
+          in each of 5 biggest cities") +
+  xlab("Parties") +
+  ylab("Number of contributions")
+```
+
+Investigating the data by City, taking the 5 largest ones, we see again
+democrats dominating the numbers being Sanders again the one with more
+contributions received. At this moment, looks pretty clear that California
+is a Democrat state.
+
+## Summary
+
+- Democrats are clear winnes in the number of contributions received in whole
+State and also in each of the 5 biggest cities.
+- From all Democrats, Sanders is the winner being Clinton the second one in the
+number of contributions received.
+- Clinton seems to be the favourite among retired people. All other groups
+contribute more times to Sanders.
+
+# Univariate Analysis
+
+### What is the structure of your dataset?
+
+The dataset includes 18 variables with 653397 observations. It includes
+contributions made by people to different candidates. People are defined by
+their name, the city where they life (and its zip code), ammount of money given,
+employer, occupation, receipt date and some other variables used to identify
+the contribution itself.
+
+```{r echo=FALSE}
+dim(ca)
+```
+
+```{r echo=FALSE}
+str(ca)
+```
+
+The summary of the dataset shows that **Sanders** is the candidate that received
+the largest number of contributions, but we still don't know if that means the
+largest ammount of money. **PENDERGAST, JAN** is the one with more
+contributions, doing it 244 times. Los Angeles is the city with more
+contributions and unemployed are the ones that contributed more times.
+The median constribution is 27$ and the mean is 126$. There are big ouliners,
+for example negative contributions of -10000 (refunds) and positive of 10800
+that we would need take in account.
+
+```{r echo=FALSE}
+summary(ca)
+```
+
+### What is/are the main feature(s) of interest in your dataset?
+
+This dataset is all about money contributions made by people to different
+candidates. Usually different group of people, depending on where they live,
+occupation (that affects yearly income) have different favourite candidates.
+The main features here are the different variables that define people, being
+the most interesting ones the **employment status**, **city** where they live
+and the **amount of money contributed**. Most of the variables are not really
+useful, like transaction ids, forms, file ids... so we are going to concentrate
+on those I have already described.
+
+Money helps a lot to win the elections. It provides the candidates with capacity
+to use ads, spread propaganda and make their ideas to reach a larger audience.
+It could be that the more money they receive, the highest the changes to win.
+So, the largest cities and also people with more money could decide who is going
+to be the winner. The question is, will the data show that trend?
+
+### What other features in the dataset do you think will help support your
+### investigation into your feature(s) of interest?
+
+In this first part I just counted the number of contributions, but that doesn't 
+show the full picture. Counting the total ammount of contributions per group 
+will start to give us some more information and see what group contributes more
+to the winning candidate and which variables seems to have interesting outlines.
+
+### Did you create any new variables from existing variables in the dataset?
+
+I created different dataframes to get data based on the variables I find more
+interesting:
+
+- **biggest_five_cities** datafrome, that includes data from top five cities.
+That includes Los Angeles, San Diego, San Jose, San Francisco and Fresno
+- **not_employed** dataframe for unemployed people
+- **students** dataframe for students
+- **retired** dataframe for retired people
+- **other_people** dataframe for all other employed people
+
+The idea is to be able to use the data based on those particular variables
+without having to *subset* it every time I want to use it. That will make the
+code easier to write, read and mantain.
+
+I also created the **"Party" variable** to specify to which party the candidate
+belongs to.
+
+### Of the features you investigated, were there any unusual distributions?
+### Did you perform any operations on the data to tidy, adjust, or change the
+### form of the data? If so, why did you do this?
+
+**Unusual distribution and interesting data**
+
+- The two top receiving number of contributions are Hillary Clinton and Bernard
+Sanders, both Democrats candidates.
+
+- If we keep investigating the number of contributions we also see that retired
+people prefer Hillary Clinton while the other groups go with Bernard Sanders.
+
+- Those without employment, and that usually means without that much money
+to spend, are the ones that contributed more times.
+
+- California is a democrat state.
+
+**Operations performed on the data** 
+
+- The *cand_nm* includes the Full Name. I used a regular expression to just
+leave the Family Name. That will make graphs easier to read.
+
+# Bivariate Plots Section
+```{r echo=FALSE, warning=FALSE}
+ggplot(aes(x=cand_nm, y=contb_receipt_amt),data=ca) +
+  geom_point(alpha = 1/5,position = "jitter") + 
+  theme(axis.text.x=element_text(angle = -90, hjust = 0),
+        plot.title = element_text(lineheight=.8, face="bold")) +
+  ggtitle("Contributions received by candidates") +
+  scale_y_continuous(limits = c(0, 15000)) +
+  xlab("Candidates") +
+  ylab("Contributions received")
+
+ggplot(aes(x=cand_nm, y=contb_receipt_amt),data=ca) +
+  geom_bar(stat="identity") + 
+  theme(axis.text.x=element_text(angle = -90, hjust = 0),
+        plot.title = element_text(lineheight=.8, face="bold")) +
+  ggtitle("Contributions in total each candidate received") +
+  xlab("Candidates") +
+  ylab("Total contribution received")
+
+ggplot(aes(x=party, y=contb_receipt_amt),data=ca) +
+  geom_bar(stat="identity") +
+  theme(plot.title = element_text(lineheight=.8, face="bold")) +
+  ggtitle("Contribution received by each party") +
+  xlab("Party") +
+  ylab("Total contribution received")
+```
+
+First graph shows that most of the contributions are bellow 2500$.
+
+Next graphs tells us a totally different story the ones we saw in previous
+section. Sanders was the one receiving the largest number of contribution,
+but if we count the total amount of money: 
+**Clinton is getting nearly twice the money that Sanders receives**.
+
+In the other hand there are no surprises in the last graph. Democrats were the
+ones receiving more contributions and we see here they are also the winners in
+the total amount of money received.
+
+```{r echo=FALSE, warning=FALSE}
+gt_retired <- ggplot(aes(x=cand_nm, y=contb_receipt_amt),data=retired)+
+  geom_bar(stat="identity") +
+  theme(axis.text.x=element_text(angle = -90, hjust = 0),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        plot.title = element_text(lineheight=.8, face="bold")) +
+  ggtitle("Retired")
+
+gt_students <- ggplot(aes(x=cand_nm, y=contb_receipt_amt),data=students)+
+  geom_bar(stat="identity") +
+  theme(axis.text.x=element_text(angle = -90, hjust = 0),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        plot.title = element_text(lineheight=.8, face="bold")) +
+  ggtitle("Students")
+
+gt_not_employed <- ggplot(aes(x=cand_nm, y=contb_receipt_amt),
+                          data=not_employed)+
+  geom_bar(stat="identity") +
+  theme(axis.text.x=element_text(angle = -90, hjust = 0),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        plot.title = element_text(lineheight=.8, face="bold")) +
+  ggtitle("Not employed")
+
+gt_other_people <- ggplot(aes(x=cand_nm, y=contb_receipt_amt),
+                          data=other_people)+
+  geom_bar(stat="identity") +
+  theme(axis.text.x=element_text(angle = -90, hjust = 0),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        plot.title = element_text(lineheight=.8, face="bold")) +
+  ggtitle("Others")
+
+grid.arrange(gt_retired, gt_students, gt_not_employed, gt_other_people)
+```
+
+Retired people contribute again to Cliton before every other candidate. 
+Not employed ones are the only ones that don't follow this trend. Most probably
+because Sanders proposed to: 
+
+*expand Social Security, to the tune of $65 more per month on average,*
+*financed by raising payroll taxes on wealthy wage earnings. He's also vowed*
+*to get the unemployed working again through a $1 trillion infrastructure plan*
+*the campaign says will create 13 million "good-paying" jobs.*
+
+[Source](http://fortune.com/2016/02/19/bernie-sanders-unemployed/)
+
+```{r echo=FALSE, warning=FALSE}
+ggplot(aes(x=cand_nm, y=contb_receipt_amt),data=biggest_five_cities) +
+  geom_bar(stat="identity") + 
+  theme(plot.title = element_text(lineheight=.8, face="bold"),
+        axis.text.x=element_text(angle = -90, hjust = 0),
+        axis.title.x=element_blank(),axis.title.y=element_blank()) +
+  ggtitle("Total contribution per candidate on the 5 biggest cities") +
+  xlab("Candidates") +
+  ylab("Total contribution received")
+
+ggplot(aes(x=party, y=contb_receipt_amt),data=biggest_five_cities) +
+  geom_bar(stat="identity") + 
+  theme(plot.title = element_text(lineheight=.8, face="bold"),
+        axis.text.x=element_text(angle = -90, hjust = 0),
+        axis.title.x=element_blank(),axis.title.y=element_blank()) +
+  ggtitle("Total contribution per party on the 5 biggest cities") +
+  xlab("Parties") +
+  ylab("Total contribution received")
+
+ggplot(aes(x=cand_nm, y=contb_receipt_amt),data=biggest_five_cities) +
+  geom_bar(stat="identity") + 
+  facet_wrap(~contbr_city, scales = "free") +
+  theme(plot.title = element_text(lineheight=.8, face="bold"),
+        axis.text.x=element_text(angle = -90, hjust = 0),
+        axis.title.x=element_blank(),axis.title.y=element_blank()) +
+  ggtitle("Total contribution per candidate each of the 5 biggest cities")
+
+ggplot(aes(x=party, y=contb_receipt_amt),data=biggest_five_cities) +
+  geom_bar(stat="identity") + 
+  facet_wrap(~contbr_city, scales = "free") +
+  theme(plot.title = element_text(lineheight=.8, face="bold"),
+        axis.text.x=element_text(angle = -90, hjust = 0),
+        axis.title.x=element_blank(),axis.title.y=element_blank()) +
+  ggtitle("Total contribution per party on each of the 5 biggest cities")
+```
+
+Here we see even more interesting trendings, that makes our first analysis of
+total number of contributions complety useless. In these 5 cities, Sanders was
+doubling the number of contributions received. But if we count the money, as we
+do in first graph, we see that Clinton gets more than twice money. She is the
+clear winner here. Democrats still get much more money (as they got much more
+contributions) than other parties.
+
+If we check the graph per city, we also see big differences similar to the one
+explained before. In Los Angeles, San Diego, San Francisco and San Jose, the
+graphs are nearly the opposite of what we say when we just counted the number
+of contributions. Being Clinton again the winner in amount (what really
+matters), but not in the number of contributions.
+
+The last thing we see is that Fresno is the one that goes in the opposite
+direction from the other 4 biggest cities. Republicans win in the amount of
+money contributed and Sanders is the one getting more money.
+
+## Summary
+
+After adding a **y** variable to our graphs (total ammount of money contributed)
+we see that the picture changed a lot.
+
+- Democrats are still clear winnes in the number of contributions received in 
+whole State, but not in Fresno.
+- Sander was the winner in the number of contributions received, but clearly 
+Clinton receives the largest total amount of money.
+- Retired provided the largest number of contributions to Clinton, and we see
+here that also the largest amount of money. Clinton is the winner in all groups
+but "not employed" ones. Mostly the opposite of what we say before.
+
+Now, things are even more clear. Democrats are the first ones, and from 
+Democrats Clinton is in the first place.
+
+# Bivariate Analysis
+
+### Talk about some of the relationships you observed in this part of the
+### investigation. How did the feature(s) of interest vary with other features
+### in the dataset?
+
+If we take in account the candidates, it varied a lot. It is clear that the
+number of contributes received doesn't really correlate with the total amount
+of money. Sanders clearly gets the largest number of contributions, but
+Clinton gets the largest amount of money. Being both Democrats, it is still
+the winning party in the state.
+
+### Did you observe any interesting relationships between the other features
+### (not the main feature(s) of interest)?
+
+Not employed people prefer Sanders, because of his proposals. Also, Fresno seems
+to follow a different pattern from other biggest cities and also the state of
+California. Fresno seems to be a Republic city.
+
+### What was the strongest relationship you found?
+
+Not employed people are, with no doubt, supporting Sanders. Seems to be the only
+group where Sanders has done a really good job.
+
+# Multivariate Plots Section
+
+```{r echo=FALSE, warning=FALSE}
+ggplot(aes(x=cand_nm, y=contb_receipt_amt),data=ca) +
+  geom_bar(stat="identity",aes(colour=party,fill=party)) + 
+  theme(axis.text.x=element_text(angle = -90, hjust = 0),
+        plot.title = element_text(lineheight=.8, face="bold")) +
+  ggtitle("Contributions in total each candidate received") +
+  xlab("Candidates") +
+  ylab("Total contribution received")
+
+ggplot(aes(x=cand_nm, y=contb_receipt_amt),data=biggest_five_cities) +
+  geom_bar(stat="identity",aes(colour=party,fill=party)) + 
+  theme(plot.title = element_text(lineheight=.8, face="bold"),
+        axis.text.x=element_text(angle = -90, hjust = 0),
+        axis.title.x=element_blank(),axis.title.y=element_blank()) +
+  ggtitle("Total contribution per candidate on the 5 biggest cities") +
+  xlab("Candidates") +
+  ylab("Total contribution received")
+```
+
+The new layer that adds colour depending on the party who receives the
+contribution reinforces the idea that CA is mostly democrat. Republicans'
+numbers are pretty low, so it is difficult to get information from them. Let's
+remove democrats so we can have an easier to read picture of all others.
+
+```{r echo=FALSE, warning=FALSE}
+ggplot(aes(x=cand_nm, y=contb_receipt_amt),
+       data=subset(ca, party != "democrat")) +
+  geom_bar(stat="identity",aes(colour=party,fill=party)) + 
+  theme(axis.text.x=element_text(angle = -90, hjust = 0),
+        plot.title = element_text(lineheight=.8, face="bold")) +
+  ggtitle("Contributions in total each candidate received") +
+  xlab("Candidates") +
+  ylab("Total contribution received")
+```
+
+Cruz and Rubio are the favourite ones among Republicans.
+
+```{r echo=FALSE, warning=FALSE}
+ggplot(aes(x=cand_nm, y=contb_receipt_amt),data=ca) +
+  geom_point(alpha = 1/5,position = "jitter") + 
+  theme(axis.text.x=element_text(angle = -90, hjust = 0),
+        plot.title = element_text(lineheight=.8, face="bold")) +
+  ggtitle("Contributions received by candidates") +
+  scale_y_continuous(limits = c(0, 15000)) +
+  xlab("Candidates") +
+  ylab("Contributions received") +
+  geom_hline(yintercept=mean(ca$contb_receipt_amt), color="red",
+             linetype="dashed")
+```
+
+The mean line added shows that there are many ouliners here making it a bit
+useless without some adjustments first. 
+
+```{r echo=FALSE, warning=FALSE}
+ggplot(aes(x=cand_nm, y=contb_receipt_amt),data=ca) +
+  geom_point(alpha = 1/100, position = "jitter") + 
+  theme(axis.text.x=element_text(angle = -90, hjust = 0),
+        plot.title = element_text(lineheight=.8, face="bold")) +
+  ggtitle("Contributions received by candidates") +
+  scale_y_continuous(limits = c(0, 1000)) +
+  xlab("Candidates") +
+  ylab("Contributions received") +
+  geom_hline(yintercept=mean(ca$contb_receipt_amt), color="red",
+             linetype="dashed")
+```
+
+Limiting the y from 0 to 1000 and adding an alpha of 1/100 we can get a better
+picture. Clinton and Sanders have so high number of contributions that they are
+really above the mean. Both candidates are per-se ouliners. We see that people
+tend to contribute with 100$, 250$, 500$, 750$ and 1000$. Those are round
+numbers, so they appear often.
+
+# Multivariate Analysis
+
+### Talk about some of the relationships you observed in this part of the
+###investigation. Were there features that strengthened each other in terms of
+###looking at your feature(s) of interest?
+
+There is not much new data, since we have already explored most of the useful
+variables of the data set. Adding parties as a third variable in our graphs
+helps us to see the big difference between Democrats and Republicans in
+California. Something we already found before but gets even more clear now.
+
+### Were there any interesting or surprising interactions between features?
+
+Not really. The data we have seen was the expected one after previous analysis.
+
+------
+
+# Final Plots and Summary
+
+### Plot One
+```{r echo=FALSE, warning=FALSE, Plot_One}
+ggplot(aes(x=cand_nm, y=contb_receipt_amt),data=ca) +
+  geom_bar(stat="identity",aes(colour=party,fill=party)) + 
+  theme(axis.text.x=element_text(angle = -90, hjust = 0),
+        plot.title = element_text(lineheight=.8, face="bold")) +
+  geom_point(aes(y=contb_receipt_amt)) +
+  ggtitle("Contributions in total each candidate received") +
+  scale_y_continuous(name="Total contribution", labels = dollar) +
+  xlab("Candidates")
+```
+
+### Description One
+
+The data we are analysing includes the amount of money each candidate has received
+from individual contributors in California. Therefore, the first graph shown here
+is created to get a first overview of general contributions in California and try
+to get an overall idea. It shows the total amount of dolars received by each
+candidate.
+
+In the graph we can see the total amount of dolars received by each candidate. 
+Colors represent the party to which the candidate belongs to. Clinton and 
+Sanders, both democrat, are the ones getting more financial help. The difference
+between the two candidates is also pretty large with Clinton receiving almost
+twice more money than Sanders.
+
+**Contributions received by each candidate**
+```{r echo=FALSE}
+by(ca$contb_receipt_amt, ca$cand_nm, sum)
+```
+
+This graph also shows that democrat party is dominant in California with both
+candidates acting as ouliners in the graph. The rest of candidates' numbers
+really low in comparison.
+
+**Number of contributions received by each party**
+```{r echo=FALSE}
+table(ca$party)
+```
+
+Even if the graph looks pretty much straightforwad, we cannot just extrapolate
+the data to every single combination and group of people so in
+next graph I am going to show some extreme cases that actually show a
+complety different picture.
+
+### Plot Two
+```{r echo=FALSE, warning=FALSE, Plot_Two}
+ggplot(aes(x=cand_nm, y=contb_receipt_amt),
+       data=subset(not_employed, cand_nm == "Clinton" | cand_nm == "Sanders"))+
+  geom_bar(stat="identity",aes(color=cand_nm, fill=cand_nm)) +
+  theme(axis.text.x=element_text(angle = -90, hjust = 0),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),axis.ticks=element_blank(),
+        plot.title = element_text(lineheight=.8, face="bold"),
+        legend.position="none") +
+  ggtitle("Not employed") +
+  scale_y_continuous(name="Total contribution", labels = dollar)
+```
+
+### Description Two
+
+The data set includes information about the employment of each contributor. This
+is a very important piece of information, because people tend to vote based on
+their personal situation. So, it is pretty usual to see different groups 
+supporting different candidates depending on the wealth or job.
+
+I have divided the contributors in different groups:
+
+- Unemployed
+- Students
+- Retired
+- All others
+
+The idea is to find some group that doesn't follow the general picture saw
+in previous graph. So, in this second picture we can see that unemployed people
+are the only group that prefer Sanders over Clinton. The difference is also
+very large. 
+
+**Contributions received by Sanders in total from everybody:**
+```{r echo=FALSE}
+by(subset(ca, cand_nm=="Sanders")$contb_receipt_amt, 
+subset(ca, cand_nm=="Sanders")$cand_nm, sum)
+```
+
+**Contributions received by Sanders in total from unemployed:**
+```{r echo=FALSE}
+by(subset(not_employed, cand_nm=="Sanders")$contb_receipt_amt, 
+subset(not_employed, cand_nm=="Sanders")$cand_nm, sum)
+```
+
+Sanders receives 26% of contributions from this group. More information about
+why this could happen in *reflection* section.
+
+### Plot Three
+```{r echo=FALSE, warning=FALSE, Plot_Three}
+ggplot(aes(x=party, y=contb_receipt_amt),
+       data=subset(biggest_five_cities,contbr_city=="FRESNO")) +
+  geom_bar(stat="identity",aes(color=party,fill=party)) + 
+  theme(plot.title = element_text(lineheight=.8, face="bold"),
+        axis.text.x=element_text(angle = -90, hjust = 0),
+        axis.title.x=element_blank(),axis.title.y=element_blank()) +
+  ggtitle("Total contribution per party in Fresno") +
+  xlab("Parties") +
+  scale_y_continuous(name="Total contribution", labels = dollar)
+```
+
+### Description Three
+
+Usually biggest cities have the biggest impact, just because of the population.
+So I have analyzed the data from the top 5 biggest cities in California and in 
+the same way I did in *graph two* I tried to find something that goes against 
+the ideas the *first graph* showed us.
+
+In fact, we can see in this graph that Fresno is not democrat. Republican
+candidates get most of the contributions, being a totally different picture
+from the overall data of California. Actually, Fresno's state and federal
+representation is mostly republican as we can see in the wikipedia links
+presented in next section.
+
+------
+
+# Reflection
+
+I don't live in the United States, so I started this project without background
+knowledge of their democratic system or preconceived ideas. While analysing the
+data I learn some very interesting information, summarized in the last three 
+graphs from previous section. I used google to find news articles and wikipedia
+information to find that what I was discovering just checking the graphs was
+the reality.
+
+- Clinton is the favourite one among democrats.
+https://en.wikipedia.org/wiki/Nationwide_opinion_polling_for_the_Democratic_Party_2016_presidential_primaries
+
+- Sanders is the favourite one among non employeed people.
+https://heatst.com/politics/bernie-sanders-has-the-most-unemployed-donors/
+
+- CA is a Democrat state.
+https://en.wikipedia.org/wiki/California
+
+- Fresno goes in opposite direction from other big cities from the state. 
+They are republicans.
+https://en.wikipedia.org/wiki/Fresno,_California
+
+It is really amazing to see how you can discover real life facts and realities
+just by graphing numbers. Checking the selected three graphs also tell us
+something really important. The full picture, the graph of whole California,
+can't be used as a perfect representation of each single city and group of 
+people individually. There will be some that doesn't follow the general rule
+and each because of different reasons.
+
+I have encountered some problems while working with the data set. As I
+mentioned, most of the data is mostly useless and cannot be correlated with
+each other variable. Zip codes, candidate Ids, memo_cd, memo_text, file number
+and so on. So, I had to investigate only a small subset of those variables. To
+get some more information, I divided employment in groups and added the party
+of each candidate, so I could get some more data. But still, there were not many
+combinations. Actually taking in account that the topic was contributions made
+to politics, there is no much more information needed apart from money and some
+other metadata from the donors.
+
+I was able to extract the data I was interested in and I learnt a lot about 
+California, the different candidates and each political party.
+
+For the future it could be even better if there was data about really big 
+donations from enterprises. That would help us to see the usual relations 
+between gas/oil/energy/technology companies and different candidates based on 
+their ideas and future plans. Those big companies are the ones that really rule 
+the world and their contributions will change it in a more drastic way 
+that individuals and their donations.
